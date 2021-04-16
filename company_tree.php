@@ -55,7 +55,6 @@ class Company
 
 	public function getDataFromAPI(){
 		$curl = curl_init($this->getServiceURL());
-		var_dump($curl);
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 		$curl_response = curl_exec($curl);
 		if ($curl_response === false) {
@@ -74,46 +73,49 @@ class Company
 }
 class TestScript
 {
+	public $companies;
+	public $travels;
     public function execute()
     {
         $companyObj = new Company('https://5f27781bf5d27e001612e057.mockapi.io/webprovise/companies');
         $travelObj = new Travel('https://5f27781bf5d27e001612e057.mockapi.io/webprovise/travels');
 
         // get list company 
-	    $company_list = $companyObj->getDataFromAPI();
-	    $travel_list = $travelObj->getDataFromAPI();
-	    $tree_company_list = $this->buildTree($company_list, $travel_list, "0");
+	    $this->companies = $companyObj->getDataFromAPI();
+	    $this->travels = $travelObj->getDataFromAPI();
+	    $tree_company_list = $this->buildTree($this->companies, $this->travels);
 	    print_r($tree_company_list);
     }
 
-    public function buildTree($arrOne,$arrTwo, $parent_id){
-	    $result = [];
-	    $cost = 0;
-	    foreach($arrOne as $key => $item){
-	    	
-	        if($item['parentId'] === $parent_id){
-	        	foreach($arrTwo as $key_2 => $item_2){
-	        		if($item['id'] === $item_2['companyId']){
-	        			$cost += (float)$item_2['price'];
+    public function buildTree($companyDetails, $travelDetails, $parentId = 0){
+    	$branch = [];
+    	$info = [];
+    	$cost = 0;
+	    foreach ($companyDetails as $element) {
+
+	        if ($element['parentId'] == $parentId) {
+	        	foreach($travelDetails as $item){
+	        		if($element['id'] === $item['companyId']){
+	        			$cost += (float)$item['price'];
 	        		}
 	        	}
 
-	        	
-	            unset($arrOne[$key]);
-	          
-	            $result = [
-	            	'id' => $item['id'],
-	            	'name' => $item['name'],
+	        	$info = [
+	        		'id' => $element['id'],
+	        		// 'parentId' => $element['parentId'],
+	            	'name' => $element['name'],
 	            	'cost' => $cost,
-	            ];
-
-	            $child = $this->buildTree($arrOne, $arrTwo, $item['id']);
-	            $result = array_merge($result, ['children' => $child]);
+	        	];
+	            $children = $this->buildTree($companyDetails, $travelDetails, $element['id']);
+	            if ($children) {
+	                $info['children'] = $children;
+	            }
+	            $branch[] = $info;
 
 	        }
 	    }
 
-	    return $result;
+	    return $branch;
 	}
 }
 (new TestScript())->execute();
